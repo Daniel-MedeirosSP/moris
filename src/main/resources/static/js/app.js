@@ -93,79 +93,76 @@
     window.open(url, "_blank", "noopener");
   }
 
-  // ===== INTEGRAÇÃO COM BACKEND =====
-  async function askBackend(formEl){
-    // TODO [BACKEND]: trocar a URL, enviar o FormData e retornar string HTML da resposta do assistente
-    // Exemplo:
-    // const res = await fetch("/chat", { method:"POST", body:new FormData(formEl) });
-    // const data = await res.json(); // { answer: "<p>...</p>" } ou { text: "..." }
-    // return data.answer || escapeHtml(data.text);
-    return null;
-  }
+ // ===== INTEGRAÇÃO COM BACKEND =====
+ async function askBackend(message){
+   // Chama o backend real
+   const res = await fetch("/chat", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({ message, sessionId: sessions.currentId })
+   });
+   if (!res.ok) throw new Error("HTTP " + res.status);
+   const data = await res.json(); // { answer: "<p>...</p>" } ou { text: "..." }
+   return data.answer || escapeHtml(data.text || "");
+ }
 
-  form.addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    const text = promptEl.value.trim(); if (!text) return;
-    const html = escapeHtml(text);
-    setTitleOnFirstUser(text);
-    add("user", html);
-    promptEl.value = ""; render();
+ form.addEventListener("submit", async (e)=>{
+   e.preventDefault();
+   const text = promptEl.value.trim(); if (!text) return;
+   const html = escapeHtml(text);
+   setTitleOnFirstUser(text);
+   add("user", html);
+   promptEl.value = ""; render();
 
-    const thinking = row("bot","",true); inner.appendChild(thinking); scrollBottom();
+   const thinking = row("bot","",true); inner.appendChild(thinking); scrollBottom();
 
-    try {
-      const backendHtml = await askBackend(form); // [BACKEND]
-      if (backendHtml) {
-        inner.removeChild(thinking);
-        add("bot", backendHtml);   // resposta REAL do backend
-      } else {
-        await new Promise(r=>setTimeout(r, 500));
-        inner.removeChild(thinking);
-        add("bot", escapeHtml("Você disse: " + text));
-      }
-    } catch {
-      inner.removeChild(thinking);
-      add("bot", '<span class="text-danger">Erro ao obter resposta.</span>');
-    } finally {
-      render();
-    }
-  });
+   try {
+     const backendHtml = await askBackend(text); // [BACKEND]
+     inner.removeChild(thinking);
+     add("bot", backendHtml || "(sem resposta)"); // resposta REAL do backend
+   } catch {
+     inner.removeChild(thinking);
+     add("bot", '<span class="text-danger">Erro ao obter resposta.</span>');
+   } finally {
+     render();
+   }
+ });
 
-  document.getElementById("clearBtn").addEventListener("click", ()=>{
-    promptEl.value = ""; promptEl.focus();
-  });
+ document.getElementById("clearBtn").addEventListener("click", ()=>{
+   promptEl.value = ""; promptEl.focus();
+ });
 
-  newBtn.addEventListener("click", ()=>{
-    const id = "s"+Date.now();
-    sessions.items.unshift({
-      id, title:"Novo chat",
-      messages:[{ role:"bot", html:"Olá! Sou o Moris 🤖. Como posso te ajudar?" }]
-    });
-    sessions.currentId = id; save(); render();
-  });
+ newBtn.addEventListener("click", ()=>{
+   const id = "s"+Date.now();
+   sessions.items.unshift({
+     id, title:"Novo chat",
+     messages:[{ role:"bot", html:"Olá! Sou o Moris 🤖. Como posso te ajudar?" }]
+   });
+   sessions.currentId = id; save(); render();
+ });
 
-  historyUl.addEventListener("click",(e)=>{
-    const item = e.target.closest(".history-item"); if (!item) return;
-    const id = item.dataset.id;
-    const sess = sessions.items.find(s=>s.id===id);
+ historyUl.addEventListener("click",(e)=>{
+   const item = e.target.closest(".history-item"); if (!item) return;
+   const id = item.dataset.id;
+   const sess = sessions.items.find(s=>s.id===id);
 
-    if (e.target.closest(".history-delete")) {
-      sessions.items = sessions.items.filter(s => s.id !== id);
-      if (sessions.currentId === id) {
-        sessions.currentId = sessions.items[0]?.id || null;
-        if (!sessions.currentId) seed();
-      }
-      save(); render(); return;
-    }
+   if (e.target.closest(".history-delete")) {
+     sessions.items = sessions.items.filter(s => s.id !== id);
+     if (sessions.currentId === id) {
+       sessions.currentId = sessions.items[0]?.id || null;
+       if (!sessions.currentId) seed();
+     }
+     save(); render(); return;
+   }
 
-    if (e.target.closest(".history-open")) { setCurrent(id); render(); }
-  });
+   if (e.target.closest(".history-open")) { setCurrent(id); render(); }
+ });
 
-  promptEl.addEventListener("keydown",(e)=>{
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
-  });
+ promptEl.addEventListener("keydown",(e)=>{
+   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+ });
 
-  shareBtn.addEventListener("click", ()=> shareWhatsApp(current()));
+ shareBtn.addEventListener("click", ()=> shareWhatsApp(current()));
 
-  render();
-})();
+ render();
+ })();
