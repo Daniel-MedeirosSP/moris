@@ -95,15 +95,14 @@
 
  // ===== INTEGRAÇÃO COM BACKEND =====
  async function askBackend(message){
-   // Chama o backend real
    const res = await fetch("/chat", {
      method: "POST",
      headers: { "Content-Type": "application/json" },
-     body: JSON.stringify({ message, sessionId: sessions.currentId })
+     body: JSON.stringify({ message })
    });
    if (!res.ok) throw new Error("HTTP " + res.status);
-   const data = await res.json(); // { answer: "<p>...</p>" } ou { text: "..." }
-   return data.answer || escapeHtml(data.text || "");
+   const data = await res.json();
+   return escapeHtml(data.text || "");
  }
 
  form.addEventListener("submit", async (e)=>{
